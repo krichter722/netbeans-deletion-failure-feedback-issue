@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.1" xmlns="http://xmlns.jcp.org/xml/ns/persistence" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence http://xmlns.jcp.org/xml/ns/persistence/persistence_2_1.xsd">
+  <persistence-unit name="richtercloud_document-scanner_jar_1.0-SNAPSHOTPU" transaction-type="RESOURCE_LOCAL">
+    <!--Choice of JPA provider and database backends:
+      Hibernate: - As long as https://hibernate.atlassian.net/browse/HHH-10653
+        which causes
+        mapped superclasses to make queries using TYPE operator fail with
+        `org.hibernate.QueryException: could not resolve property: class of:
+        [entity class]` isn't resolved, OpenJPA should be used which seems much
+        more useful anyway (validation, usable feedback, etc.)
+        - 5.2.5.Final, 5.1.3.Final and 5.0.11.Final cause all queries to fail due to inexplicable `java.lang.ArrayIndexOutOfBoundsException: 27` at com.mysql.cj.mysqla.MysqlaUtils.bitToLong(MysqlaUtils.java:68)
+        - 5.2.5.Final in conjunction with Apache Derby storage causes profile to hang
+        - error `class is frozen` during enhancement plugin -> issue in
+        5.2.5.Final<ref>https://hibernate.atlassian.net/browse/HHH-11242</ref>
+        - error `Exception in thread "main" java.lang.ClassCastException: org.hibernate.bytecode.enhance.spi.LazyPropertyInitializer$1 cannot be cast to [B`
+        in 5.2.4.Final and 5.1.3.Final -> 5.0.11 works
+        - 5.0.11 and probably in general: lazy fetching of byte[] only works if
+        classes are compile-time enhanced
+        - 5.0.11.Final: `MultipleBagFetchException: cannot simultaneously fetch multiple bags:`
+        -> issue in early Hibernate versions<ref>http://stackoverflow.com/questions/4334970/hibernate-cannot-simultaneously-fetch-multiple-bags</ref>
+        specify non-portable `@LazyCollection(LazyCollectionOption.FALSE)` or
+        make [One/Many]To[One/Many] relations lazy (can be initialized with
+        `Collection.size`
+        - 5.0.11.Final: inexplainable runtime exceptions like `java.lang.ArrayIndexOutOfBoundsException: 8`
+        even after one successful run with `hibernate.hbm2ddl.auto=validate`
+        -> Hibernate unusable due to other issues
+        - 5.0.11.Final: EntityManager.unwrap(java.sql.Connection) fails due to
+        `Exception in thread "main" javax.persistence.PersistenceException: Hibernate cannot unwrap interface java.sql.Connection`
+      Eclipselink: - can't be kept from fetching a (to be lazily fetch) byte[]
+      data (not even by specifying `Session.getLogin().setUsesStreamsForBinding(true)`
+      in a SessionCustomizer (check that it's executed with debugger))
+      PostgreSQL: - 9.4.1212: EntityManager.unwrap(java.sql.Connection).createBlob fails
+        due to `java.sql.SQLFeatureNotSupportedException: Die Methode org.postgresql.jdbc.PgConnection.createBlob() ist noch nicht implementiert.`
+        -> can't be used for BLOBs (Apache Derby 10.13.1.1 in embedded mode works)
+      Apache Derby: - 10.13.1.1: storing binary data in java.sql.Blob takes
+        about 60 s to 180 s for 200 MB which is inacceptable
+      -->
+    <!--<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>-->
+    <provider>org.eclipse.persistence.jpa.PersistenceProvider</provider>
+    <class>richtercloud.document.scanner.model.APackage</class>
+    <class>richtercloud.document.scanner.model.Bill</class>
+    <class>richtercloud.document.scanner.model.Company</class>
+    <class>richtercloud.document.scanner.model.Document</class>
+    <class>richtercloud.document.scanner.model.EmailAddress</class>
+    <class>richtercloud.document.scanner.model.Employment</class>
+    <class>richtercloud.document.scanner.model.FinanceAccount</class>
+    <class>richtercloud.document.scanner.model.Leaflet</class>
+    <class>richtercloud.document.scanner.model.Location</class>
+    <class>richtercloud.document.scanner.model.Payment</class>
+    <class>richtercloud.document.scanner.model.Person</class>
+    <class>richtercloud.document.scanner.model.Shipping</class>
+    <class>richtercloud.document.scanner.model.TelephoneCall</class>
+    <class>richtercloud.document.scanner.model.TelephoneNumber</class>
+    <class>richtercloud.document.scanner.model.Transport</class>
+    <class>richtercloud.document.scanner.model.TransportTicket</class>
+    <class>richtercloud.document.scanner.model.Email</class>
+    <class>richtercloud.document.scanner.model.Withdrawal</class>
+    <class>richtercloud.document.scanner.model.Workflow</class>
+    <class>richtercloud.document.scanner.model.WorkflowItem</class>
+    <properties>
+      <!--URL and driver is set programmtically-->
+      <!--<property name="hibernate.cache.provider_class" value="org.hibernate.cache.NoCacheProvider"/>-->
+      <!--<property name="hibernate.cache.provider_class" value="org.hibernate.cache.EhCacheProvider"/>-->
+        <!-- Ehcache provider isn't compatible with JCache 1.0.1 used in
+              CachingImageWrapper-->
+      <!--<property name="hibernate.hbm2ddl.auto" value="update"/>-->
+      <property name="eclipselink.ddl-generation" value="create-or-extend-tables"/>
+      <!--setting eclipse.weaving to false<ref>http://www.eclipse.org/eclipselink/documentation/2.5/concepts/app_dev007.htm</ref>
+            doesn't reduce memory usage with MySQL (and probably others
+            neither)-->
+      <property name="eclipselink.session.customizer" value="richtercloud.document.scanner.model.DocumentScannerSessionCustomizer"/>
+      <property name="eclipselink.query-results-cache" value="True"/>
+        <!--upper case for some reason<ref>http://www.eclipse.org/eclipselink/documentation/2.5/jpa/extensions/q_query-results-cache.htm</ref>-->
+    </properties>
+  </persistence-unit>
+</persistence>
